@@ -1,4 +1,3 @@
-// src/components/OrderForm.jsx
 import { useState, useEffect } from "react";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "../firebase";
@@ -11,7 +10,7 @@ const OrderForm = ({ onAddOrder, currentUser, initialData, submitLabel = "Thêm 
     note: "",
     videoStart: "",
     videoEnd: "",
-    partner: "tranthuong",
+    partner: "",
   });
 
   const [partners, setPartners] = useState([]);
@@ -29,8 +28,16 @@ const OrderForm = ({ onAddOrder, currentUser, initialData, submitLabel = "Thêm 
   }, []);
 
   useEffect(() => {
-    if (initialData) setForm(initialData);
-  }, [initialData]);
+    if (initialData) {
+      setForm(initialData);
+    } else {
+      if (currentUser?.role === "partner") {
+        setForm(prev => ({ ...prev, partner: currentUser.username }));
+      } else if (currentUser?.role === "admin") {
+        setForm(prev => ({ ...prev, partner: "tranthuong" }));
+      }
+    }
+  }, [initialData, currentUser]);
 
   const [rawText, setRawText] = useState("");
 
@@ -42,7 +49,7 @@ const OrderForm = ({ onAddOrder, currentUser, initialData, submitLabel = "Thêm 
       price: "",
       product: "",
       note: "",
-      partner: "tranthuong"
+      partner: currentUser?.role === "partner" ? currentUser.username : "",
     };
 
     const codeMatch = all.match(/PAL\d{5,}/i);
@@ -64,7 +71,7 @@ const OrderForm = ({ onAddOrder, currentUser, initialData, submitLabel = "Thêm 
     if (priceMatch) temp = temp.replace(priceMatch[0], "");
     if (noteMatch) temp = temp.replace(noteMatch[0], "");
     result.product = temp.replace(/\s+/g, " ").trim();
-
+    result.partner = "tranthuong" ;
     setForm({ ...form, ...result });
   };
 
@@ -86,7 +93,20 @@ const OrderForm = ({ onAddOrder, currentUser, initialData, submitLabel = "Thêm 
     };
 
     onAddOrder(newOrder);
-    setForm({ code: "", product: "", price: "", note: "", videoStart: "", videoEnd: "", partner: "tranthuong" });
+    setForm({
+      code: "",
+      product: "",
+      price: "",
+      note: "",
+      videoStart: "",
+      videoEnd: "",
+      partner:
+        currentUser?.role === "partner"
+          ? currentUser.username
+          : currentUser?.role === "admin"
+          ? "tranthuong"
+          : "",
+    });
     setRawText("");
   };
 
@@ -103,21 +123,82 @@ const OrderForm = ({ onAddOrder, currentUser, initialData, submitLabel = "Thêm 
       <button
         onClick={() => parseOrderText(rawText)}
         className="mb-4 bg-gray-100 px-3 py-1 rounded text-sm border hover:bg-gray-200"
-      >📥 Phân tích chuỗi</button>
+      >
+        📥 Phân tích chuỗi
+      </button>
 
       <form onSubmit={handleSubmit} className="space-y-3">
-        <input type="text" name="code" placeholder="Mã đơn (PAL...)" value={form.code} onChange={handleChange} className="w-full border px-3 py-2 rounded" />
-        <textarea name="product" placeholder="Tên đơn / sản phẩm" value={form.product} onChange={handleChange} rows={2} className="w-full border px-3 py-2 rounded" />
-        <input type="number" name="price" placeholder="Giá tiền" value={form.price} onChange={handleChange} className="w-full border px-3 py-2 rounded" />
-        <textarea name="note" placeholder="Ghi chú (tài khoản / nhân vật...)" value={form.note} onChange={handleChange} rows={2} className="w-full border px-3 py-2 rounded" />
-        <input type="text" name="videoStart" placeholder="Link video bắt đầu" value={form.videoStart} onChange={handleChange} className="w-full border px-3 py-2 rounded" />
-        <input type="text" name="videoEnd" placeholder="Link video hoàn thành" value={form.videoEnd} onChange={handleChange} className="w-full border px-3 py-2 rounded" />
-        <select name="partner" value={form.partner} onChange={handleChange} className="w-full border px-3 py-2 rounded">
-          {partners.map((p) => (
-            <option key={p} value={p}>{p}</option>
-          ))}
-        </select>
-        <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 w-full">{submitLabel}</button>
+        <input
+          type="text"
+          name="code"
+          placeholder="Mã đơn (PAL...)"
+          value={form.code}
+          onChange={handleChange}
+          className="w-full border px-3 py-2 rounded"
+        />
+        <textarea
+          name="product"
+          placeholder="Tên đơn / sản phẩm"
+          value={form.product}
+          onChange={handleChange}
+          rows={2}
+          className="w-full border px-3 py-2 rounded"
+        />
+        <input
+          type="number"
+          name="price"
+          placeholder="Giá tiền"
+          value={form.price}
+          onChange={handleChange}
+          className="w-full border px-3 py-2 rounded"
+        />
+        <textarea
+          name="note"
+          placeholder="Ghi chú (tài khoản / nhân vật...)"
+          value={form.note}
+          onChange={handleChange}
+          rows={2}
+          className="w-full border px-3 py-2 rounded"
+        />
+        <input
+          type="text"
+          name="videoStart"
+          placeholder="Link video bắt đầu"
+          value={form.videoStart}
+          onChange={handleChange}
+          className="w-full border px-3 py-2 rounded"
+        />
+        <input
+          type="text"
+          name="videoEnd"
+          placeholder="Link video hoàn thành"
+          value={form.videoEnd}
+          onChange={handleChange}
+          className="w-full border px-3 py-2 rounded"
+        />
+
+        {currentUser?.role !== "partner" && (
+          <select
+            name="partner"
+            value={form.partner}
+            onChange={handleChange}
+            className="w-full border px-3 py-2 rounded"
+          >
+            <option value="">-- Chọn đối tác --</option>
+            {partners.map((p) => (
+              <option key={p} value={p}>
+                {p}
+              </option>
+            ))}
+          </select>
+        )}
+
+        <button
+          type="submit"
+          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 w-full"
+        >
+          {submitLabel}
+        </button>
       </form>
     </div>
   );

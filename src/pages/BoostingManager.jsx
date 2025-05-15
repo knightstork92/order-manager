@@ -159,7 +159,12 @@ const BoostingManager = () => {
         </div>
 
         <div className="flex-1">
-          <BoostingCategoryList categories={categories} />
+          <BoostingCategoryList
+			  categories={categories}
+			  selectedGame={selectedGame}
+			  onCategoryChange={() => fetchCategories(selectedGame.id)}
+		  />
+
         </div>
       </div>
 

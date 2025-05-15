@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import AppLayout from "./layouts/AppLayout";
 import OrderPage from "./pages/OrderPage";
+import OrderPageSearch from "./pages/OrderPageSearch"; // nếu chưa import
 import TimesheetPage from "./pages/TimesheetPage";
 import UserPage from "./pages/UserPage";
 import LoginPage from "./pages/LoginPage";
@@ -32,7 +33,7 @@ function App() {
         >
           {/* 📦 Trang Đơn hàng (mọi role đều truy cập được) */}
           <Route index element={<OrderPage />} />
-
+	      <Route path="/orders/search" element={<OrderPageSearch />} />  {/* 👈 dòng cần thêm */}
           {/* 👤 Quản lý người dùng - chỉ admin */}
           <Route
             path="users"

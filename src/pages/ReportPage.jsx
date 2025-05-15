@@ -23,6 +23,7 @@ const ReportPage = () => {
   const [fromDate, setFromDate] = useState(null);
   const [toDate, setToDate] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [filteredOrders, setFilteredOrders] = useState([]);
 
   const fetchOrders = async () => {
     const snap = await getDocs(collection(db, "orders"));
@@ -48,40 +49,49 @@ const ReportPage = () => {
     fetchPartners();
   }, []);
 
-  const now = new Date();
-  const getWeekNumber = (d) => {
-    const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-    const dayNum = date.getUTCDay() || 7;
-    date.setUTCDate(date.getUTCDate() + 4 - dayNum);
-    const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
-    return Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
+  useEffect(() => {
+    if (orders.length > 0) applyFilters();
+  }, [orders]);
+
+  const applyFilters = () => {
+    const now = new Date();
+    const getWeekNumber = (d) => {
+      const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+      const dayNum = date.getUTCDay() || 7;
+      date.setUTCDate(date.getUTCDate() + 4 - dayNum);
+      const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+      return Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
+    };
+
+    const isInRange = (d) => {
+      if (!fromDate || !toDate) return true;
+      return d >= fromDate && d <= toDate;
+    };
+
+    const filtered = orders.filter((o) => {
+      if (selectedPartner && o.partner !== selectedPartner.value) return false;
+
+      const created = new Date(o.createdAt?.seconds * 1000 || o.createdAt);
+      if (filterType === "week") {
+        return getWeekNumber(created) === getWeekNumber(now) &&
+               created.getFullYear() === now.getFullYear();
+      }
+      if (filterType === "month") {
+        return created.getMonth() === now.getMonth() &&
+               created.getFullYear() === now.getFullYear();
+      }
+      if (filterType === "custom") {
+        return isInRange(created);
+      }
+      return true;
+    });
+
+    setFilteredOrders(filtered);
+    setCurrentPage(1);
   };
-
-  const isInRange = (d) => {
-    if (!fromDate || !toDate) return true;
-    return d >= fromDate && d <= toDate;
-  };
-
-  const filtered = orders.filter((o) => {
-    if (selectedPartner && o.partner !== selectedPartner.value) return false;
-
-    const created = new Date(o.createdAt?.seconds * 1000 || o.createdAt);
-    if (filterType === "week") {
-      return getWeekNumber(created) === getWeekNumber(now) &&
-             created.getFullYear() === now.getFullYear();
-    }
-    if (filterType === "month") {
-      return created.getMonth() === now.getMonth() &&
-             created.getFullYear() === now.getFullYear();
-    }
-    if (filterType === "custom") {
-      return isInRange(created);
-    }
-    return true;
-  });
 
   const summaryMap = {};
-  filtered.forEach((o) => {
+  filteredOrders.forEach((o) => {
     const date = new Date(o.createdAt?.seconds * 1000 || o.createdAt)
       .toISOString()
       .split("T")[0];
@@ -96,16 +106,16 @@ const ReportPage = () => {
     (a, b) => new Date(a.date) - new Date(b.date)
   );
 
-  const paginated = filtered
+  const paginated = filteredOrders
     .sort((a, b) =>
       new Date(b.createdAt?.seconds * 1000 || b.createdAt) -
       new Date(a.createdAt?.seconds * 1000 || a.createdAt)
     )
     .slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
-  const totalOrders = filtered.length;
-  const totalRevenue = filtered.reduce((sum, o) => sum + Number(o.price || 0), 0);
-  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
+  const totalOrders = filteredOrders.length;
+  const totalRevenue = filteredOrders.reduce((sum, o) => sum + Number(o.price || 0), 0);
+  const totalPages = Math.ceil(filteredOrders.length / ITEMS_PER_PAGE);
 
   return (
     <div className="max-w-6xl mx-auto p-4">
@@ -147,9 +157,15 @@ const ReportPage = () => {
           placeholder="Chọn đối tác"
           className="min-w-[200px]"
         />
+
+        <button
+          onClick={applyFilters}
+          className="px-3 py-1 bg-blue-500 text-white rounded"
+        >
+          Xem thống kê
+        </button>
       </div>
 
-      {/* Tổng kết */}
       <div className="mb-6 text-sm text-gray-700 space-y-1">
         <p>
           Tổng đơn: <strong>{totalOrders}</strong>
@@ -159,34 +175,32 @@ const ReportPage = () => {
         </p>
       </div>
 
-      {/* Biểu đồ */}
       {summary.length > 0 && (
         <div className="bg-white p-4 rounded shadow mb-6">
           <h3 className="text-lg font-semibold mb-2">Biểu đồ doanh thu</h3>
           <ResponsiveContainer width="100%" height={350}>
             <BarChart data={summary}>
-				<CartesianGrid strokeDasharray="3 3" />
-				<XAxis dataKey="date" />
-				<YAxis yAxisId="left" />
-				<YAxis
-				  yAxisId="right"
-				  orientation="right"
-				  tickFormatter={(v) => `${(v / 1_000_000).toFixed(1)}tr`}
-				/>
-				<Tooltip
-				  formatter={(v) =>
-					typeof v === "number" ? `${v.toLocaleString()} đ` : v
-				  }
-				/>
-				<Legend />
-				<Bar yAxisId="left" dataKey="count" name="Số đơn" fill="#3182ce" />
-				<Bar yAxisId="right" dataKey="total" name="Doanh thu" fill="#38a169" />
-			</BarChart>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="date" />
+              <YAxis yAxisId="left" />
+              <YAxis
+                yAxisId="right"
+                orientation="right"
+                tickFormatter={(v) => `${(v / 1_000_000).toFixed(1)}tr`}
+              />
+              <Tooltip
+                formatter={(v) =>
+                  typeof v === "number" ? `${v.toLocaleString()} đ` : v
+                }
+              />
+              <Legend />
+              <Bar yAxisId="left" dataKey="count" name="Số đơn" fill="#3182ce" />
+              <Bar yAxisId="right" dataKey="total" name="Doanh thu" fill="#38a169" />
+            </BarChart>
           </ResponsiveContainer>
         </div>
       )}
 
-      {/* Danh sách đơn hàng */}
       <div className="bg-white p-4 rounded shadow mb-6 overflow-auto">
         <h3 className="text-lg font-semibold mb-3">Danh sách đơn hàng</h3>
         <table className="w-full text-sm border">
@@ -214,7 +228,6 @@ const ReportPage = () => {
           </tbody>
         </table>
 
-        {/* Phân trang */}
         <div className="flex justify-between items-center mt-3">
           <span className="text-sm">
             Trang {currentPage}/{totalPages}

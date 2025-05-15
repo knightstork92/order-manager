@@ -23,9 +23,13 @@ const Sidebar = () => {
       <h2 className="text-xl font-bold mb-6">Knight Team</h2>
       <nav className="text-sm">
 
-        <Section title="Quản lý đơn hàng">
-          <NavLink to="/" className={linkClass}>📦 Đơn hàng</NavLink>
-        </Section>
+       <Section title="Quản lý đơn hàng">
+		  <NavLink to="/" className={linkClass}>📦 Đơn hàng</NavLink>
+		  <NavLink to="/orders/search" className={linkClass}>
+			🔍 Tìm kiếm đơn hàng (chỉ dùng khi cần)
+		  </NavLink>
+		</Section>
+
 
         {(role === "admin" || role === "employee") && (
           <Section title="Chấm công & nhân sự">

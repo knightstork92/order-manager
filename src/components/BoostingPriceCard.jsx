@@ -119,7 +119,11 @@ const BoostingPriceCard = ({ gameId, category }) => {
                 {card.imageUrl && <img src={card.imageUrl} alt={card.title} className="w-full h-40 object-cover mb-2 rounded" />}
                 <h4 className="text-lg font-semibold mb-1">{card.title}</h4>
                 <p className="text-blue-600 font-bold mb-1">{card.price.toLocaleString()}đ</p>
-                <p className="text-sm text-gray-700 mb-2">{card.description}</p>
+                <div
+				  className="text-sm text-gray-700 mb-2 whitespace-pre-line"
+				  dangerouslySetInnerHTML={{ __html: card.description }}
+				></div>
+
                 {card.videoUrls?.length > 0 && (
                   <details className="mb-2">
                     <summary className="cursor-pointer text-sm text-blue-500">🎬 Xem video demo</summary>

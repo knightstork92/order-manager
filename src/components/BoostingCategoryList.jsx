@@ -1,4 +1,3 @@
-// components/BoostingCategoryList.jsx
 import React, { useState } from "react";
 import {
   collection,
@@ -8,32 +7,38 @@ import {
 } from "firebase/firestore";
 import { db } from "../firebase";
 
-const BoostingCategoryList = ({ categories = [], selectedGame }) => {
-  const [form, setForm] = useState({ name: "", type: "basic" });
+const BoostingCategoryList = ({ categories = [], selectedGame, onCategoryChange }) => {
+  const [form, setForm] = useState({ name: "", type: "table" }); // default là "Chung"
   const [editing, setEditing] = useState(null);
 
   const handleAdd = async () => {
-    if (!form.name || !selectedGame?.id) return;
+    if (!form.name.trim() || !selectedGame?.id) return;
     const docRef = await addDoc(collection(db, "boosting_categories"), {
       ...form,
+      name: form.name.trim(),
       gameId: selectedGame.id,
       active: true,
     });
     await updateDoc(docRef, { id: docRef.id });
-    setForm({ name: "", type: "basic" });
+    setForm({ name: "", type: "table" });
+    if (onCategoryChange) onCategoryChange(); // Gọi lại để load mới
   };
 
   const handleUpdate = async () => {
-    if (!editing?.id || !editing.name) return;
+    if (!editing?.id || !editing.name.trim()) return;
     await updateDoc(doc(db, "boosting_categories", editing.id), {
-      name: editing.name,
+      name: editing.name.trim(),
       type: editing.type,
       active: editing.active,
     });
     setEditing(null);
+    if (onCategoryChange) onCategoryChange(); // Gọi lại để load mới
   };
 
-  const filtered = categories;
+  const typeLabels = {
+    table: "Chung",
+    card: "Build",
+  };
 
   return (
     <div>
@@ -52,8 +57,8 @@ const BoostingCategoryList = ({ categories = [], selectedGame }) => {
           onChange={(e) => setForm({ ...form, type: e.target.value })}
           className="border px-2 py-1 rounded"
         >
-          <option value="basic">Chung</option>
-          <option value="build">Build</option>
+          <option value="table">Chung</option>
+          <option value="card">Build</option>
         </select>
         <button
           onClick={handleAdd}
@@ -63,17 +68,18 @@ const BoostingCategoryList = ({ categories = [], selectedGame }) => {
         </button>
       </div>
 
-      {filtered.length === 0 ? (
+      {categories.length === 0 ? (
         <p className="text-sm text-gray-500">Chưa có danh mục boosting</p>
       ) : (
         <ul className="mt-2 space-y-1">
-          {filtered.map((cat) => (
+          {categories.map((cat) => (
             <li
               key={cat.id}
               className="border rounded px-3 py-2 flex justify-between items-center"
             >
               <span>
-                📌 {cat.name} <span className="text-xs text-gray-500">({cat.type})</span>
+                📌 {cat.name}{" "}
+                <span className="text-xs text-gray-500">({typeLabels[cat.type] || cat.type})</span>
               </span>
               <div className="space-x-2 text-sm">
                 <button
@@ -109,8 +115,8 @@ const BoostingCategoryList = ({ categories = [], selectedGame }) => {
               onChange={(e) => setEditing({ ...editing, type: e.target.value })}
               className="w-full border px-3 py-2 rounded mb-2"
             >
-              <option value="basic">Chung</option>
-              <option value="build">Build</option>
+              <option value="table">Chung</option>
+              <option value="card">Build</option>
             </select>
             <label className="flex items-center gap-2 mb-4">
               <input
